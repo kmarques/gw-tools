@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <link rel="stylesheet" href="https://ssl.gstatic.com/docs/script/css/add-ons.css" />
+    <script type="text/javascript">
+      var DIALOG_DIMENSIONS = {
+        width: 600,
+        height: 425,
+      };
+      var pickerApiLoaded = false;
+      const currentConfig = google.script.run.getCurrentConfig();
+
+      const config = currentConfig || {
+        outputFolder: null,
+        pdfTemplate: null
+      }
+
+      function onApiLoad() {
+        gapi.load('picker', {
+          callback: function () {
+            pickerApiLoaded = true;
+          },
+        });
+        google.script.run.withSuccessHandler(init).withFailureHandler(showError).getOAuthToken();
+      }
+
+      function init(token) {
+        const currentConfig = google.script.run.getCurrentConfig();
+        console.log(currentConfig, config);
+        const outputFolderPicker = createOutputFolderPicker(token);
+        document.getElementById('output-folder-select').addEventListener('click', () => outputFolderPicker.setVisible(true));
+        const pdfTemplatePicker = createPdfTemplatePicker(token);
+        document.getElementById('template-pdf-select').addEventListener('click', () => pdfTemplatePicker.setVisible(true));
+
+        document.getElementById('save').addEventListener('click', () => {
+          google.script.run.configure(config);
+          google.script.host.close();
+        })
+        document.getElementById('cancel').addEventListener('click', () => {
+          google.script.host.close();
+        })
+      }
+
+      function createOutputFolderPicker(token) {
+        if (pickerApiLoaded && token) {
+          var docsView = new google.picker.DocsView()
+          .setIncludeFolders(true) 
+          .setMimeTypes('application/vnd.google-apps.folder')
+          .setSelectFolderEnabled(true);
+
+          var picker = new google.picker.PickerBuilder()
+            .addView(docsView)
+            .enableFeature(google.picker.Feature.NAV_HIDDEN)
+            .hideTitleBar()
+            .setSize(DIALOG_DIMENSIONS.width - 2, DIALOG_DIMENSIONS.height - 2)
+            .setOAuthToken(token)
+            .setCallback(pickerCallback((doc) => {
+              config.outputFolder = {
+                id: doc.id,
+                name: doc.name
+              };
+              document.getElementById('output-folder').textContent = doc.name;
+              picker.setVisible(false);
+            }))
+            .setOrigin('https://docs.google.com')
+            .build();
+
+          return picker;
+        } else {
+          showError('Unable to load the file picker.');
+        }
+      }
+
+      function createPdfTemplatePicker(token) {
+        if (pickerApiLoaded && token) {
+          var picker = new google.picker.PickerBuilder()
+            .addView(google.picker.ViewId.PDFS)
+            .enableFeature(google.picker.Feature.NAV_HIDDEN)
+            .hideTitleBar()
+            .setSize(DIALOG_DIMENSIONS.width - 2, DIALOG_DIMENSIONS.height - 2)
+            .setOAuthToken(token)
+            .setCallback(pickerCallback((doc) => {
+              config.pdfTemplate = {
+                id: doc.id,
+                name: doc.name
+              };
+              document.getElementById('template-pdf').textContent = doc.name;
+              picker.setVisible(false);
+            }))
+            .setOrigin('https://docs.google.com')
+            .build();
+
+          return picker;
+        } else {
+          showError('Unable to load the file picker.');
+        }
+      }
+
+      /**
+       * A callback function that extracts the chosen document's metadata from the
+       * response object. For details on the response object, see
+       * https://developers.google.com/picker/docs/result
+       *
+       * @param {object} data The response object.
+       */
+      function pickerCallback(callback) {
+        return (data) => {
+          var action = data[google.picker.Response.ACTION];
+          if (action == google.picker.Action.PICKED) {
+            var doc = data[google.picker.Response.DOCUMENTS][0];
+            callback(doc);
+            //var id = doc[google.picker.Document.ID];
+            // Show the ID of the Google Drive folder
+            //document.getElementById('result').innerHTML = id;
+            //google.script.run.configureOutputFolder(doc);
+            //google.script.host.close();
+          } else if (action == google.picker.Action.CANCEL) {
+            callback(null)
+          }
+        }
+      }
+
+      function showError(message) {
+        document.getElementById('result').innerHTML = 'Error: ' + message;
+      }
+    </script>
+    <style>
+      flex {
+        display: flex;
+      }
+      flex-col {
+        flex-direction: column;
+      }
+      gap-4 {
+        gap: 2rem;
+      }
+    </style>
+  </head>
+
+  <body>
+    <div class="flex flex-col">
+      <div class="flex gap-4">
+        Template PDF:<button id="template-pdf-select">Choisir</button><span id="template-pdf">Non sélectionné</span>
+      </div>
+      <div class="flex gap-4">
+        Dossier de sortie:<button id="output-folder-select">Choisir</button><span id="output-folder">Non sélectionné</span>
+      </div>
+      <p id="result"></p>
+      <div class="flex">
+        <button id="cancel">Annuler</button>
+        <button id="save">Installer</button>
+      </div>
+    </div>
+    <script type="text/javascript" src="https://apis.google.com/js/api.js?onload=onApiLoad"></script>
+  </body>
+</html>
