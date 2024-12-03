@@ -112,11 +112,11 @@ class PdfForm {
   }
 
   saveToPDFBlob(config) {
-      return Utilities.newBlob(
-          [...new Int8Array(config.data)],
-          MimeType.PDF,
-          config.filename
-        );
+    return Utilities.newBlob(
+      [...new Int8Array(config.data)],
+      MimeType.PDF,
+      config.filename
+    );
   }
 
   /**
@@ -134,19 +134,19 @@ class PdfForm {
           "Utilities.sleep($1);return t();"
         )
     );
-    this.PDFLib.PDFForm.prototype.getFieldByRefMaybe = function(ref) {
+    this.PDFLib.PDFForm.prototype.getFieldByRefMaybe = function (ref) {
       const fields = this.getFields();
       for (let idx = 0, len = fields.length; idx < len; idx++) {
         const field = fields[idx];
         if (field.ref.objectNumber === ref) return field;
       }
       return undefined;
-    }
-    this.PDFLib.PDFForm.prototype.getFieldByRef = function(ref) {
+    };
+    this.PDFLib.PDFForm.prototype.getFieldByRef = function (ref) {
       const field = this.getFieldByRefMaybe(ref);
       if (field) return field;
       throw new NoSuchFieldError(ref);
-    }
+    };
   }
 
   /**
